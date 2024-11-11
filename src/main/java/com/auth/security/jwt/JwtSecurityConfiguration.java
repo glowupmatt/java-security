@@ -1,6 +1,11 @@
-package com.auth.security.basic;
+package com.auth.security.jwt;
 
 import static org.springframework.security.config.Customizer.withDefaults;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPublicKey;
+import java.util.UUID;
 
 import javax.sql.DataSource;
 
@@ -14,21 +19,30 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-// @Configuration
-public class BasicAuthSecurityConfiguration {
-    
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+@Configuration
+public class JwtSecurityConfiguration {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((auth) -> auth.anyRequest().authenticated());
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.httpBasic(withDefaults());
-        http.csrf().disable();
-        http.headers().frameOptions().sameOrigin();
+        http.csrf(csrf -> csrf.disable());
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+        http.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return http.build();
     }
 
@@ -45,23 +59,20 @@ public class BasicAuthSecurityConfiguration {
         };
     }
 
+     @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter grantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        grantedAuthoritiesConverter.setAuthorityPrefix("ROLE_");
+        grantedAuthoritiesConverter.setAuthoritiesClaimName("roles");
+
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter);
+        return jwtAuthenticationConverter;
+    }
+
     enum Role {
         USER,ADMIN
     }
-
-    // @Bean
-    // public UserDetailsService userDetailService() {
-    //     var user = User.withUsername("user")
-    //             .password("{noop}dummy")
-    //             .roles(Role.USER.toString())
-    //             .build();
-
-    //     var admin = User.withUsername("admin")
-    //             .password("{noop}dummy")
-    //             .roles(Role.ADMIN.toString())
-    //             .build();
-    //     return new InMemoryUserDetailsManager(user, admin);
-    // }
     
     @Bean
     public DataSource dataSource() {
@@ -97,5 +108,39 @@ public class BasicAuthSecurityConfiguration {
     @Bean 
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public KeyPair keyPair() {
+        try {
+            var keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            return keyPairGenerator.generateKeyPair();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Bean
+    public RSAKey rsaKey(KeyPair keyPair) {
+        return new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                .privateKey(keyPair.getPrivate())
+                .keyID(UUID.randomUUID().toString())
+                .build();
+    }
+    
+    @Bean
+    public JWKSource<SecurityContext> jwkSource(RSAKey rsaKey) {
+        var jwkSet = new JWKSet(rsaKey);
+
+        return (jwkSelector, context) -> jwkSelector.select(jwkSet);
+        
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder(RSAKey rsaKey) throws JOSEException{
+        return NimbusJwtDecoder
+            .withPublicKey(rsaKey.toRSAPublicKey())
+            .build();
     }
 }
