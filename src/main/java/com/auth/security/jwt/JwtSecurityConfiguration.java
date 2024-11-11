@@ -40,17 +40,19 @@ public class JwtSecurityConfiguration {
 	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		
 		http.authorizeHttpRequests(
-						auth -> {
-							auth
-							.requestMatchers("/authenticate").permitAll()
-							.anyRequest().authenticated();
-						});
+			auth -> {
+				auth
+					.requestMatchers("/authenticate").permitAll()
+					.requestMatchers("/public/**").permitAll() // Allow access to all endpoints under /public without authentication
+					.requestMatchers("/admin/**").hasRole("ADMIN") // Allow access to all endpoints under /admin only for users with ADMIN role
+				.anyRequest().authenticated();
+			});
 		
 		http.sessionManagement(
-						session -> 
-							session.sessionCreationPolicy(
-									SessionCreationPolicy.STATELESS)
-						);
+			session -> 
+				session.sessionCreationPolicy(
+						SessionCreationPolicy.STATELESS)
+			);
 		
 		http.httpBasic(withDefaults());
 		
