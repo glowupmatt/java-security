@@ -27,8 +27,8 @@ public class BasicAuthSecurityConfiguration {
         http.authorizeHttpRequests((auth) -> auth.anyRequest().authenticated());
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.httpBasic(withDefaults());
-        http.csrf().disable();
-        http.headers().frameOptions().sameOrigin();
+        http.csrf(csrf -> csrf.disable());
+        http.headers(headers -> headers.frameOptions(frameOptionsConfig -> frameOptionsConfig.disable()));
         return http.build();
     }
 
