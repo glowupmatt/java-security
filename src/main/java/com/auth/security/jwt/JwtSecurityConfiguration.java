@@ -85,13 +85,14 @@ public class JwtSecurityConfiguration {
 			.build();
 		
 		var admin = User.withUsername("admin")
-				//.password("{noop}dummy")
-				.password("dummy")
-				.passwordEncoder(str -> passwordEncoder().encode(str))
-				.roles("ADMIN", "USER")
-				.build();
+			//.password("{noop}dummy")
+			.password("dummy")
+			.passwordEncoder(str -> passwordEncoder().encode(str))
+			.roles("ADMIN", "USER")
+			.build();
 		
 		var jdbcUserDetailsManager = new JdbcUserDetailsManager(dataSource);
+		
 		jdbcUserDetailsManager.createUser(user);
 		jdbcUserDetailsManager.createUser(admin);
 
