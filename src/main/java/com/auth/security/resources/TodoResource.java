@@ -41,7 +41,7 @@ public class TodoResource {
 
     @PostMapping("/users/{username}/todos")
     public void createTodosForASpecificUser(@PathVariable String username, @RequestBody Todo todo) {
-        logger.info("Create {} for {}.", todo, username);
+        logger.info("Create {} for {}", todo, username);
         TODOS_LIST.add(todo);
     }
 }
