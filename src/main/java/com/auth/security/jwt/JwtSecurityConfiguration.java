@@ -51,12 +51,14 @@ public class JwtSecurityConfiguration {
 			session -> 
 				session.sessionCreationPolicy(
 						SessionCreationPolicy.STATELESS)
-			);
+		);
 		
+		// If using JWT, CSRF protection is not needed	
 		http.httpBasic(withDefaults());
 		
 		http.csrf(csrf -> csrf.disable());
 		
+		//Best practice to remove this because of clickjacking
 		http.headers(headers -> headers.frameOptions(frameOptionsConfig-> frameOptionsConfig.disable()));
 		
 		http.oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()));
