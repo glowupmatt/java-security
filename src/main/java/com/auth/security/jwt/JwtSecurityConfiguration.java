@@ -53,7 +53,7 @@ public class JwtSecurityConfiguration {
 						SessionCreationPolicy.STATELESS)
 		);
 		
-		// If using JWT, CSRF protection is not needed	
+		// If using JWT, CSRF protection is not needed.	
 		http.httpBasic(withDefaults());
 		
 		http.csrf(csrf -> csrf.disable());
